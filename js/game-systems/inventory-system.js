@@ -3,7 +3,7 @@ class InventorySystem {
         this.items = [];
         this.equipped = {
             weapon: null,
-            armor: null,
+            armor: null,a
             helmet: null,
             boots: null,
             accessory1: null,
@@ -442,3 +442,224 @@ class InventorySystem {
 }
 
 window.InventorySystem = new InventorySystem();
+
+class InventorySystem {
+    constructor() {
+        this.items = new Map();
+        this.equipment = {
+            weapon: null,
+            armor: null,
+            accessory1: null,
+            accessory2: null
+        };
+        this.capacity = 50;
+        this.gold = 100;
+        
+        this.load();
+    }
+    
+    addItem(itemId, quantity = 1) {
+        const existing = this.items.get(itemId);
+        if (existing) {
+            existing.quantity += quantity;
+        } else {
+            this.items.set(itemId, {
+                id: itemId,
+                quantity: quantity,
+                ...ItemDatabase[itemId]
+            });
+        }
+        
+        this.save();
+        UI.Notifications.show(`Obtenu: ${ItemDatabase[itemId].name} x${quantity}`, 'item');
+    }
+    
+    removeItem(itemId, quantity = 1) {
+        const existing = this.items.get(itemId);
+        if (!existing) return false;
+        
+        if (existing.quantity > quantity) {
+            existing.quantity -= quantity;
+        } else {
+            this.items.delete(itemId);
+        }
+        
+        this.save();
+        return true;
+    }
+    
+    equipItem(itemId) {
+        const item = this.items.get(itemId);
+        if (!item) return false;
+        
+        if (item.type === 'weapon') {
+            this.unequip('weapon');
+            this.equipment.weapon = itemId;
+        } else if (item.type === 'armor') {
+            this.unequip('armor');
+            this.equipment.armor = itemId;
+        } else if (item.type === 'accessory') {
+            if (!this.equipment.accessory1) {
+                this.equipment.accessory1 = itemId;
+            } else if (!this.equipment.accessory2) {
+                this.equipment.accessory2 = itemId;
+            } else {
+                // Remplacer le premier accessoire
+                this.unequip('accessory1');
+                this.equipment.accessory1 = itemId;
+            }
+        }
+        
+        this.applyEquipmentStats();
+        this.save();
+        return true;
+    }
+    
+    unequip(slot) {
+        const itemId = this.equipment[slot];
+        if (!itemId) return;
+        
+        this.equipment[slot] = null;
+        this.applyEquipmentStats();
+        this.save();
+    }
+    
+    applyEquipmentStats() {
+        // Réinitialiser les bonus d'équipement
+        Player.equipmentStats = {
+            strength: 0,
+            agility: 0,
+            endurance: 0,
+            intelligence: 0,
+            perception: 0,
+            charisma: 0
+        };
+        
+        // Appliquer les stats de chaque équipement
+        Object.values(this.equipment).forEach(itemId => {
+            if (itemId) {
+                const item = ItemDatabase[itemId];
+                if (item.stats) {
+                    Object.entries(item.stats).forEach(([stat, value]) => {
+                        Player.equipmentStats[stat] += value;
+                    });
+                }
+            }
+        });
+        
+        // Mettre à jour le joueur
+        Player.updateStats();
+    }
+    
+    useItem(itemId) {
+        const item = this.items.get(itemId);
+        if (!item) return false;
+        
+        if (item.type === 'consumable') {
+            if (item.effect) {
+                this.applyItemEffect(item);
+                this.removeItem(itemId, 1);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    applyItemEffect(item) {
+        switch (item.effect) {
+            case 'heal':
+                Player.heal(item.value);
+                break;
+            case 'mana':
+                Player.restoreMana(item.value);
+                break;
+            case 'buff':
+                Player.addBuff(item.buffType, item.value, item.duration);
+                break;
+        }
+    }
+    
+    getTotalItems() {
+        let total = 0;
+        for (const item of this.items.values()) {
+            total += item.quantity;
+        }
+        return total;
+    }
+    
+    isFull() {
+        return this.getTotalItems() >= this.capacity;
+    }
+    
+    save() {
+        const data = {
+            items: Array.from(this.items.entries()),
+            equipment: this.equipment,
+            capacity: this.capacity,
+            gold: this.gold
+        };
+        
+        SaveManager.save('inventory', data);
+    }
+    
+    load() {
+        const data = SaveManager.load('inventory');
+        if (data) {
+            this.items = new Map(data.items);
+            this.equipment = data.equipment;
+            this.capacity = data.capacity;
+            this.gold = data.gold;
+            
+            this.applyEquipmentStats();
+        }
+    }
+    
+    // Interface avec l'UI
+    static updateUI() {
+        if (window.UI && UI.InventoryUI) {
+            UI.InventoryUI.update();
+        }
+    }
+}
+
+// Base de données d'objets (exemple)
+const ItemDatabase = {
+    'sword_basic': {
+        name: 'Épée Rouillée',
+        type: 'weapon',
+        rarity: 'common',
+        stats: { strength: 3 },
+        description: 'Une vieille épée rouillée mais qui peut encore servir.'
+    },
+    'armor_leather': {
+        name: 'Armure de Cuir',
+        type: 'armor',
+        rarity: 'common',
+        stats: { endurance: 5 },
+        description: 'Armure légère en cuir.'
+    },
+    'potion_health': {
+        name: 'Potion de Vie',
+        type: 'consumable',
+        rarity: 'common',
+        effect: 'heal',
+        value: 50,
+        description: 'Restaure 50 PV.'
+    },
+    'potion_mana': {
+        name: 'Potion de Mana',
+        type: 'consumable',
+        rarity: 'common',
+        effect: 'mana',
+        value: 30,
+        description: 'Restaure 30 PM.'
+    },
+    'ring_strength': {
+        name: 'Anneau de Force',
+        type: 'accessory',
+        rarity: 'uncommon',
+        stats: { strength: 5, agility: 2 },
+        description: 'Un anneau qui augmente la force et l\'agilité.'
+    }
+};
