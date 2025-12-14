@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /backup/
+Disallow: /user_saves/
+Disallow: /admin/
+
+Sitemap: https://shadowmonarch.com/sitemap.xml
