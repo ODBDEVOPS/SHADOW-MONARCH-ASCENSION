@@ -1,17 +1,22 @@
 {
   "name": "Shadow Monarch Ascension",
   "short_name": "ShadowMonarch",
-  "description": "RPG d'évolution Solo Leveling sur mobile",
+  "description": "RPG d'évolution Solo Leveling - Devenez le Monarque de l'Ombre",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "landscape",
   "background_color": "#0a0a12",
   "theme_color": "#6d28d9",
-  "orientation": "landscape",
+  "categories": ["games", "entertainment", "rpg"],
+  "lang": "fr",
+  "dir": "ltr",
+  
   "icons": [
     {
       "src": "assets/icons/icon-72.png",
       "sizes": "72x72",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "assets/icons/icon-96.png",
@@ -36,7 +41,8 @@
     {
       "src": "assets/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "assets/icons/icon-384.png",
@@ -49,6 +55,54 @@
       "type": "image/png"
     }
   ],
+  
+  "screenshots": [
+    {
+      "src": "assets/screenshots/screen1.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Interface d'Évolution"
+    },
+    {
+      "src": "assets/screenshots/screen2.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Combat en Donjon"
+    }
+  ],
+  
+  "shortcuts": [
+    {
+      "name": "Continuer",
+      "short_name": "Continuer",
+      "description": "Reprendre votre progression",
+      "url": "/?continue",
+      "icons": [{ "src": "assets/icons/play.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Nouvelle Partie",
+      "short_name": "Nouveau",
+      "description": "Démarrer une nouvelle aventure",
+      "url": "/?new",
+      "icons": [{ "src": "assets/icons/new.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Évolution",
+      "short_name": "Évoluer",
+      "description": "Améliorer vos compétences",
+      "url": "/?evolution",
+      "icons": [{ "src": "assets/icons/evolution.png", "sizes": "96x96" }]
+    }
+  ],
+  
+  "related_applications": [],
   "prefer_related_applications": false,
-  "related_applications": []
+  
+  "features": [
+    "Gamepad",
+    "Touchscreen",
+    "Controller"
+  ]
 }
