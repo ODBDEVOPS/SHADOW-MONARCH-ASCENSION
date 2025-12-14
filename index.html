@@ -2,42 +2,130 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <title>Shadow Monarch Ascension</title>
+    <meta name="description" content="RPG mobile d'évolution inspiré de Solo Leveling. Devenez le Monarque de l'Ombre !">
     
     <!-- PWA -->
-    <meta name="theme-color" content="#0a0a12">
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a12">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/ui-evolution.css">
     <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/evolution-styles.css">
     
-    <!-- Three.js -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Polices Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Touch -->
-    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <!-- Three.js et dépendances -->
+    <script src="libs/three.min.js"></script>
+    <script src="libs/GLTFLoader.js"></script>
+    <script src="libs/OrbitControls.js"></script>
+    <script src="libs/hammer.min.js"></script>
+    
+    <!-- Préchargement des assets critiques -->
+    <link rel="preload" href="js/game.bundle.min.js" as="script">
+    <link rel="preload" href="css/game.bundle.min.css" as="style">
+    <link rel="preload" href="assets/models/player_lowpoly.glb" as="fetch" crossorigin>
+    
+    <!-- Analytics (optionnel) -->
+    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script> -->
+    
+    <style>
+        /* Styles de chargement */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a12;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+        
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #333;
+            border-top: 5px solid #6d28d9;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #00f3ff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
+        
+        .progress-bar {
+            width: 80%;
+            max-width: 400px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6d28d9, #00f3ff);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
 </head>
 <body>
-    <!-- Canvas 3D -->
+    <!-- Écran de chargement -->
+    <div id="loading-screen">
+        <div class="loader"></div>
+        <div class="loading-text" id="loading-text">Initialisation du Système...</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="tip-text" id="tip-text">Conseil: Le jeu se sauvegarde automatiquement</div>
+    </div>
+    
+    <!-- Conteneur principal du jeu -->
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
         
         <!-- Overlay UI -->
         <div id="ui-overlay">
-            <!-- Barre de vie/mana -->
+            <!-- HUD du haut -->
             <div class="hud-top">
                 <div class="health-bar">
-                    <div class="health-fill" style="width: 100%"></div>
-                    <span class="health-text">100/100</span>
+                    <div class="health-fill" id="health-fill"></div>
+                    <span class="health-text" id="health-text">100/100</span>
                 </div>
                 <div class="mana-bar">
-                    <div class="mana-fill" style="width: 100%"></div>
-                    <span class="mana-text">50/50</span>
+                    <div class="mana-fill" id="mana-fill"></div>
+                    <span class="mana-text" id="mana-text">50/50</span>
+                </div>
+                <div class="level-display">
+                    <span class="level-text">Niv. <span id="level-text">1</span></span>
+                    <span class="rank-text" id="rank-text">E</span>
                 </div>
             </div>
             
@@ -49,38 +137,85 @@
                 </div>
                 
                 <div class="action-buttons">
-                    <button class="skill-btn" data-skill="1">⚔️</button>
-                    <button class="skill-btn" data-skill="2">🛡️</button>
-                    <button class="skill-btn" data-skill="3">🔥</button>
-                    <button class="skill-btn" data-skill="4">💨</button>
-                    <button class="skill-btn special" data-skill="ult">✨</button>
+                    <button class="skill-btn" data-skill="1" id="skill-1">⚔️</button>
+                    <button class="skill-btn" data-skill="2" id="skill-2">🛡️</button>
+                    <button class="skill-btn" data-skill="3" id="skill-3">🔥</button>
+                    <button class="skill-btn" data-skill="4" id="skill-4">💨</button>
+                    <button class="skill-btn special" data-skill="ult" id="skill-ult">✨</button>
                 </div>
             </div>
             
             <!-- Boutons UI -->
             <div class="ui-buttons">
-                <button id="btn-evolution" class="ui-btn">📊 Système</button>
-                <button id="btn-inventory" class="ui-btn">🎒</button>
-                <button id="btn-quests" class="ui-btn">📜</button>
-                <button id="btn-army" class="ui-btn">👥</button>
+                <button id="btn-evolution" class="ui-btn" title="Système d'Évolution">
+                    📊
+                </button>
+                <button id="btn-inventory" class="ui-btn" title="Inventaire">
+                    🎒
+                </button>
+                <button id="btn-quests" class="ui-btn" title="Quêtes">
+                    📜
+                </button>
+                <button id="btn-army" class="ui-btn" title="Armée d'Ombre">
+                    👥
+                </button>
+                <button id="btn-menu" class="ui-btn" title="Menu">
+                    ⚙️
+                </button>
             </div>
+            
+            <!-- Notifications -->
+            <div id="notifications-container"></div>
         </div>
         
-        <!-- Interface d'évolution (cachée par défaut) -->
-        <div id="evolution-ui" class="fullscreen-ui">
-            <!-- Détails dans evolution-ui.js -->
-        </div>
+        <!-- Interface d'évolution (fullscreen) -->
+        <div id="evolution-ui" class="fullscreen-ui"></div>
+        
+        <!-- Menu principal (fullscreen) -->
+        <div id="main-menu" class="fullscreen-ui"></div>
+        
+        <!-- Inventaire (fullscreen) -->
+        <div id="inventory-ui" class="fullscreen-ui"></div>
+        
+        <!-- Interface armée d'ombre (fullscreen) -->
+        <div id="army-ui" class="fullscreen-ui"></div>
     </div>
     
+    <!-- Dialogues et popups -->
+    <div id="dialogue-container"></div>
+    <div id="popup-container"></div>
+    
     <!-- JavaScript -->
-    <script src="js/utils/performance-monitor.js"></script>
-    <script src="js/utils/mobile-optimizer.js"></script>
+    <!-- Bundle minifié en production -->
+    <script src="js/game.bundle.min.js"></script>
+    
+    <!-- Ou fichiers séparés en développement -->
+    <!--
+    <script src="js/config.js"></script>
+    <script src="js/loader.js"></script>
     <script src="js/utils/save-manager.js"></script>
     <script src="js/game-systems/evolution-system.js"></script>
     <script src="js/game-systems/combat-system.js"></script>
     <script src="js/ui/touch-controls.js"></script>
     <script src="js/ui/evolution-ui.js"></script>
+    <script src="js/audio-manager.js"></script>
     <script src="js/three-app.js"></script>
     <script src="js/main.js"></script>
+    -->
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker enregistré:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Échec enregistrement Service Worker:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
