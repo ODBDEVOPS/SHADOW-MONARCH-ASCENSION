@@ -1,511 +1,261 @@
 class ShadowArmySystem {
     constructor() {
-        this.soldiers = [];
-        this.maxCapacity = 10; // Évolue avec le rang et le charisme
-        this.generals = []; // Soldats évolués
-        this.currentFormation = 'default';
+        this.soldiers = new Map();
+        this.maxSoldiers = 10;
+        this.generals = [];
+        this.formations = {
+            default: 'line',
+            available: ['line', 'circle', 'wedge', 'square']
+        };
         
-        this.loadFromSave();
+        this.load();
     }
     
     extractSoldier(enemy) {
-        if (this.soldiers.length >= this.maxCapacity) {
-            UI.Notifications.show('Capacité maximale atteinte!', 'warning');
-            return false;
+        if (this.soldiers.size >= this.maxSoldiers) {
+            UI.Notifications.show('Limite de soldats atteinte!', 'warning');
+            return null;
         }
         
-        // Calculer le taux de réussite basé sur le rang et les stats
-        const successRate = this.calculateExtractionRate(enemy);
-        if (Math.random() > successRate) {
-            UI.Notifications.show('Échec de l\'extraction!', 'error');
-            return false;
+        // Chance d'extraction basée sur le rang et la compétence
+        const baseChance = 0.3;
+        const rankBonus = EvolutionSystem.getRankMultiplier() * 0.1;
+        const success = Math.random() < (baseChance + rankBonus);
+        
+        if (success) {
+            const soldier = this.createSoldierFromEnemy(enemy);
+            const soldierId = `soldier_${Date.now()}`;
+            
+            this.soldiers.set(soldierId, soldier);
+            
+            // Notification
+            UI.Notifications.show(`Soldat extrait: ${soldier.name}`, 'soldier');
+            
+            this.save();
+            return soldier;
+        } else {
+            UI.Notifications.show('Extraction échouée', 'warning');
+            return null;
         }
-        
-        // Créer un soldat basé sur l'ennemi
-        const soldier = this.createSoldierFromEnemy(enemy);
-        this.soldiers.push(soldier);
-        
-        // Effet visuel
-        this.playExtractionEffect(enemy);
-        
-        // Notification
-        UI.Notifications.show(`Soldat d'ombre extrait: ${soldier.name}`, 'success');
-        
-        // Sauvegarder
-        this.save();
-        
-        return soldier;
-    }
-    
-    calculateExtractionRate(enemy) {
-        const baseRate = 0.3; // 30% de base
-        const rankBonus = this.getRankBonus();
-        const charismaBonus = EvolutionSystem.stats.charisma * 0.01;
-        const enemyTierModifier = this.getEnemyTierModifier(enemy.tier);
-        
-        return Math.min(0.95, baseRate + rankBonus + charismaBonus + enemyTierModifier);
-    }
-    
-    getRankBonus() {
-        const bonuses = {
-            'E': 0.0,
-            'D': 0.1,
-            'C': 0.2,
-            'B': 0.3,
-            'A': 0.4,
-            'S': 0.5,
-            'SS': 0.6,
-            'SSS': 0.7
-        };
-        return bonuses[EvolutionSystem.rank] || 0;
-    }
-    
-    getEnemyTierModifier(tier) {
-        // Plus l'ennemi est fort, plus c'est difficile à extraire
-        const modifiers = {
-            'common': 0.1,
-            'uncommon': 0.05,
-            'rare': 0.0,
-            'elite': -0.1,
-            'boss': -0.2,
-            'legendary': -0.3
-        };
-        return modifiers[tier] || 0;
     }
     
     createSoldierFromEnemy(enemy) {
+        // Créer un soldat basé sur l'ennemi
         const soldierTypes = {
-            'goblin': { name: 'Goblin Ombre', type: 'infantry', tier: 'common' },
-            'orc': { name: 'Orc Ombre', type: 'warrior', tier: 'uncommon' },
-            'mage': { name: 'Mage Ombre', type: 'mage', tier: 'rare' },
-            'knight': { name: 'Chevalier Ombre', type: 'knight', tier: 'elite' },
-            'dragon': { name: 'Dragon Ombre', type: 'dragon', tier: 'legendary' }
+            'slime': { name: 'Slime d\'Ombre', type: 'infantry', rank: 'E' },
+            'goblin': { name: 'Gobelin d\'Ombre', type: 'infantry', rank: 'D' },
+            'wolf': { name: 'Loup d\'Ombre', type: 'cavalry', rank: 'C' },
+            'mage': { name: 'Mage d\'Ombre', type: 'mage', rank: 'B' },
+            'knight': { name: 'Chevalier d\'Ombre', type: 'elite', rank: 'A' }
         };
         
-        const enemyType = enemy.type || 'goblin';
-        const template = soldierTypes[enemyType] || soldierTypes.goblin;
+        const enemyType = enemy.type || 'slime';
+        const template = soldierTypes[enemyType] || soldierTypes.slime;
         
         return {
-            id: Date.now() + Math.random(),
+            id: `soldier_${Date.now()}`,
             name: template.name,
             type: template.type,
-            tier: template.tier,
+            rank: template.rank,
             level: 1,
             exp: 0,
-            stats: this.generateSoldierStats(template.tier),
+            stats: this.generateSoldierStats(template.rank),
             skills: [],
-            model: enemy.type, // Référence au modèle 3D
-            equipped: false // Si assigné à une formation
+            equipment: null,
+            loyalty: 100,
+            createdAt: Date.now()
         };
     }
     
-    generateSoldierStats(tier) {
+    generateSoldierStats(rank) {
         const baseStats = {
             health: 50,
-            damage: 10,
+            attack: 10,
             defense: 5,
-            speed: 1.0
+            speed: 5
         };
         
-        const multipliers = {
-            'common': 1.0,
-            'uncommon': 1.5,
-            'rare': 2.0,
-            'elite': 3.0,
-            'legendary': 5.0
+        const rankMultipliers = {
+            'E': 1.0,
+            'D': 1.5,
+            'C': 2.0,
+            'B': 3.0,
+            'A': 4.0,
+            'S': 6.0
         };
         
-        const multiplier = multipliers[tier] || 1.0;
+        const multiplier = rankMultipliers[rank] || 1.0;
         
         return {
             health: Math.floor(baseStats.health * multiplier),
-            damage: Math.floor(baseStats.damage * multiplier),
+            attack: Math.floor(baseStats.attack * multiplier),
             defense: Math.floor(baseStats.defense * multiplier),
-            speed: baseStats.speed * multiplier
+            speed: Math.floor(baseStats.speed * multiplier)
         };
-    }
-    
-    playExtractionEffect(enemy) {
-        if (!window.game) return;
-        
-        // Effet visuel d'extraction
-        const position = enemy.position.clone();
-        
-        // Créer un vortex d'ombre
-        const vortexGeometry = new THREE.ConeGeometry(1, 3, 8);
-        const vortexMaterial = new THREE.MeshBasicMaterial({
-            color: 0x6d28d9,
-            transparent: true,
-            opacity: 0.7
-        });
-        
-        const vortex = new THREE.Mesh(vortexGeometry, vortexMaterial);
-        vortex.position.copy(position);
-        vortex.rotation.x = Math.PI;
-        
-        window.game.scene.add(vortex);
-        
-        // Animation
-        let scale = 0.1;
-        let opacity = 0.7;
-        
-        const animate = () => {
-            scale += 0.1;
-            opacity -= 0.02;
-            
-            vortex.scale.setScalar(scale);
-            vortexMaterial.opacity = opacity;
-            vortex.rotation.z += 0.1;
-            
-            if (opacity > 0) {
-                requestAnimationFrame(animate);
-            } else {
-                window.game.scene.remove(vortex);
-                vortexGeometry.dispose();
-                vortexMaterial.dispose();
-            }
-        };
-        
-        animate();
-        
-        // Son
-        AudioManager.play('extraction');
     }
     
     levelUpSoldier(soldierId) {
-        const soldier = this.soldiers.find(s => s.id === soldierId);
-        if (!soldier) return false;
+        const soldier = this.soldiers.get(soldierId);
+        if (!soldier) return;
         
         soldier.level++;
         soldier.exp = 0;
         
-        // Améliorer les stats
-        const growthRates = {
-            'common': 1.1,
-            'uncommon': 1.15,
-            'rare': 1.2,
-            'elite': 1.25,
-            'legendary': 1.3
-        };
+        // Augmenter les stats
+        soldier.stats.health += 10;
+        soldier.stats.attack += 2;
+        soldier.stats.defense += 1;
         
-        const growth = growthRates[soldier.tier] || 1.1;
-        
-        soldier.stats.health = Math.floor(soldier.stats.health * growth);
-        soldier.stats.damage = Math.floor(soldier.stats.damage * growth);
-        soldier.stats.defense = Math.floor(soldier.stats.defense * growth);
-        
-        // Vérifier l'évolution
+        // Évolution possible
         this.checkSoldierEvolution(soldier);
         
-        // Sauvegarder
-        this.save();
+        // Notification
+        UI.Notifications.show(`${soldier.name} niveau ${soldier.level}!`, 'soldier');
         
-        return true;
+        this.save();
     }
     
     checkSoldierEvolution(soldier) {
-        // Évolution à des niveaux spécifiques
-        const evolutionLevels = [10, 20, 30, 40, 50];
+        const evolutionTable = {
+            'infantry': { level: 10, evolveTo: 'elite' },
+            'mage': { level: 10, evolveTo: 'archmage' },
+            'cavalry': { level: 10, evolveTo: 'heavy_cavalry' }
+        };
         
-        if (evolutionLevels.includes(soldier.level)) {
-            this.evolveSoldier(soldier);
+        const evolution = evolutionTable[soldier.type];
+        if (evolution && soldier.level >= evolution.level) {
+            this.evolveSoldier(soldier, evolution.evolveTo);
         }
     }
     
-    evolveSoldier(soldier) {
-        const evolutionMap = {
-            'infantry': 'warrior',
-            'warrior': 'knight',
-            'mage': 'archmage',
-            'knight': 'paladin',
-            'dragon': 'ancient dragon'
+    evolveSoldier(soldier, newType) {
+        const oldName = soldier.name;
+        soldier.type = newType;
+        
+        // Changer le nom selon le type
+        const typeNames = {
+            'elite': 'Élite d\'Ombre',
+            'archmage': 'Archimage d\'Ombre',
+            'heavy_cavalry': 'Cavalerie Lourde d\'Ombre'
         };
         
-        const newType = evolutionMap[soldier.type];
-        if (newType) {
-            const oldType = soldier.type;
-            soldier.type = newType;
-            soldier.name = `${newType} ombre`;
-            
-            // Amélioration significative des stats
-            soldier.stats.health = Math.floor(soldier.stats.health * 1.5);
-            soldier.stats.damage = Math.floor(soldier.stats.damage * 1.5);
-            soldier.stats.defense = Math.floor(soldier.stats.defense * 1.5);
-            
-            UI.Notifications.show(`${soldier.name} a évolué!`, 'evolution');
-            
-            // Animation d'évolution
-            this.playSoldierEvolutionEffect(soldier);
-        }
-    }
-    
-    playSoldierEvolutionEffect(soldier) {
-        // Trouver le soldat dans la scène (si actif)
-        // Pour l'instant, effet visuel générique
-        if (window.game && window.game.shadowSoldiers) {
-            const soldierMesh = window.game.shadowSoldiers.find(s => s.userData.id === soldier.id);
-            if (soldierMesh) {
-                // Flash de lumière
-                const flashLight = new THREE.PointLight(0x00f3ff, 2, 10);
-                flashLight.position.copy(soldierMesh.position);
-                window.game.scene.add(flashLight);
-                
-                setTimeout(() => {
-                    window.game.scene.remove(flashLight);
-                }, 1000);
-            }
-        }
-    }
-    
-    setFormation(formationType) {
-        this.currentFormation = formationType;
+        soldier.name = typeNames[newType] || soldier.name;
         
-        // Appliquer les bonus de formation
-        const formationBonuses = {
-            'default': { damage: 1.0, defense: 1.0 },
-            'offensive': { damage: 1.3, defense: 0.8 },
-            'defensive': { damage: 0.8, defense: 1.5 },
-            'balanced': { damage: 1.1, defense: 1.1 }
-        };
-        
-        this.formationBonus = formationBonuses[formationType] || formationBonuses.default;
-        
-        // Mettre à jour l'UI
-        UI.ArmyUI.updateFormation(this.currentFormation);
-        
-        // Sauvegarder
-        this.save();
-    }
-    
-    sendOnMission(soldierIds, missionType) {
-        // Envoyer des soldats en mission pour obtenir des récompenses
-        const selectedSoldiers = this.soldiers.filter(s => soldierIds.includes(s.id));
-        
-        if (selectedSoldiers.length === 0) return false;
-        
-        const missionDuration = this.getMissionDuration(missionType);
-        const missionRewards = this.calculateMissionRewards(selectedSoldiers, missionType);
-        
-        // Marquer les soldats comme occupés
-        selectedSoldiers.forEach(soldier => {
-            soldier.onMission = true;
-            soldier.missionEndTime = Date.now() + missionDuration;
-        });
-        
-        // Sauvegarder
-        this.save();
-        
-        // Démarrer le timer
-        this.startMissionTimer(selectedSoldiers, missionRewards, missionDuration);
-        
-        return {
-            duration: missionDuration,
-            rewards: missionRewards
-        };
-    }
-    
-    getMissionDuration(missionType) {
-        const durations = {
-            'short': 5 * 60 * 1000, // 5 minutes
-            'medium': 30 * 60 * 1000, // 30 minutes
-            'long': 2 * 60 * 60 * 1000, // 2 heures
-            'overnight': 8 * 60 * 60 * 1000 // 8 heures
-        };
-        return durations[missionType] || durations.short;
-    }
-    
-    calculateMissionRewards(soldiers, missionType) {
-        const totalPower = soldiers.reduce((sum, soldier) => {
-            return sum + (soldier.stats.damage + soldier.stats.defense) * soldier.level;
-        }, 0);
-        
-        const rewardMultipliers = {
-            'short': 1,
-            'medium': 3,
-            'long': 10,
-            'overnight': 25
-        };
-        
-        const multiplier = rewardMultipliers[missionType] || 1;
-        
-        return {
-            exp: Math.floor(totalPower * 0.1 * multiplier),
-            gold: Math.floor(totalPower * 0.5 * multiplier),
-            items: this.generateMissionItems(soldiers.length, missionType)
-        };
-    }
-    
-    generateMissionItems(soldierCount, missionType) {
-        const items = [];
-        const rarityChances = {
-            'short': { common: 0.8, uncommon: 0.2 },
-            'medium': { common: 0.6, uncommon: 0.3, rare: 0.1 },
-            'long': { common: 0.4, uncommon: 0.4, rare: 0.2 },
-            'overnight': { common: 0.2, uncommon: 0.4, rare: 0.3, epic: 0.1 }
-        };
-        
-        const chances = rarityChances[missionType] || rarityChances.short;
-        
-        for (let i = 0; i < soldierCount; i++) {
-            const rand = Math.random();
-            let cumulative = 0;
-            
-            for (const [rarity, chance] of Object.entries(chances)) {
-                cumulative += chance;
-                if (rand <= cumulative) {
-                    items.push({
-                        type: 'consumable',
-                        rarity: rarity,
-                        name: `${rarity} item`
-                    });
-                    break;
-                }
-            }
-        }
-        
-        return items;
-    }
-    
-    startMissionTimer(soldiers, rewards, duration) {
-        const missionId = Date.now();
-        
-        const timer = setTimeout(() => {
-            this.completeMission(soldiers, rewards, missionId);
-        }, duration);
-        
-        // Stocker le timer pour annulation possible
-        this.missionTimers[missionId] = {
-            timer: timer,
-            soldiers: soldiers,
-            endTime: Date.now() + duration
-        };
-        
-        // Mettre à jour l'UI
-        UI.ArmyUI.showMissionStarted(soldiers.length, duration);
-    }
-    
-    completeMission(soldiers, rewards, missionId) {
-        // Libérer les soldats
-        soldiers.forEach(soldier => {
-            soldier.onMission = false;
-            soldier.missionEndTime = null;
-            soldier.exp += rewards.exp;
-            
-            // Vérifier le niveau up
-            while (soldier.exp >= soldier.level * 100) {
-                this.levelUpSoldier(soldier.id);
-            }
-        });
-        
-        // Distribuer les récompenses
-        InventorySystem.addGold(rewards.gold);
-        rewards.items.forEach(item => InventorySystem.addItem(item));
-        
-        // Supprimer le timer
-        delete this.missionTimers[missionId];
+        // Augmenter les stats
+        soldier.stats.health *= 1.5;
+        soldier.stats.attack *= 1.5;
+        soldier.stats.defense *= 1.5;
         
         // Notification
-        UI.Notifications.show('Mission terminée!', 'success');
-        UI.ArmyUI.showMissionComplete(rewards);
+        UI.Notifications.show(`${oldName} a évolué en ${soldier.name}!`, 'evolution');
+    }
+    
+    deploySoldiers(soldierIds, position) {
+        const deployed = [];
         
-        // Sauvegarder
+        soldierIds.forEach(id => {
+            const soldier = this.soldiers.get(id);
+            if (soldier && soldier.loyalty > 0) {
+                deployed.push(soldier);
+                
+                // Réduire la loyauté
+                soldier.loyalty -= 5;
+                
+                // Si la loyauté atteint 0, le soldat se rebelle
+                if (soldier.loyalty <= 0) {
+                    this.soldierRebellion(soldier);
+                }
+            }
+        });
+        
+        // Créer les soldats dans Three.js
+        this.createSoldiersInScene(deployed, position);
+        
+        return deployed;
+    }
+    
+    createSoldiersInScene(soldiers, position) {
+        if (!window.game) return;
+        
+        soldiers.forEach(soldier => {
+            // Créer un modèle simple pour le soldat
+            const geometry = new THREE.ConeGeometry(0.5, 1, 8);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: 0x6d28d9,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(position);
+            mesh.position.x += (Math.random() - 0.5) * 2;
+            mesh.position.z += (Math.random() - 0.5) * 2;
+            
+            // Ajouter à la scène
+            window.game.scene.add(mesh);
+            
+            // Stocker la référence
+            soldier.mesh = mesh;
+        });
+    }
+    
+    soldierRebellion(soldier) {
+        // Le soldat devient hostile
+        UI.Notifications.show(`${soldier.name} s'est rebellé!`, 'warning');
+        
+        // Retirer du contrôle
+        this.soldiers.delete(soldier.id);
+        
+        // Ajouter comme ennemi dans la scène
+        this.convertToEnemy(soldier);
+    }
+    
+    convertToEnemy(soldier) {
+        // Convertir en ennemi (à implémenter selon le système d'ennemis)
+        console.log(`Soldat rebelle: ${soldier.name}`);
+    }
+    
+    increaseCapacity(amount) {
+        this.maxSoldiers += amount;
+        UI.Notifications.show(`Capacité d'armée augmentée: ${this.maxSoldiers}`, 'info');
         this.save();
     }
     
-    updateCapacity() {
-        // La capacité de base évolue avec le rang
-        const baseCapacity = {
-            'E': 0,
-            'D': 5,
-            'C': 10,
-            'B': 20,
-            'A': 35,
-            'S': 50,
-            'SS': 75,
-            'SSS': 100
-        };
-        
-        const charismaBonus = Math.floor(EvolutionSystem.stats.charisma / 10);
-        
-        this.maxCapacity = baseCapacity[EvolutionSystem.rank] + charismaBonus;
-        
-        // Si on dépasse la capacité, désactiver certains soldats
-        if (this.soldiers.length > this.maxCapacity) {
-            this.soldiers.slice(this.maxCapacity).forEach(soldier => {
-                soldier.active = false;
-            });
-        }
+    update(deltaTime) {
+        // Mettre à jour la loyauté (régénération)
+        this.soldiers.forEach(soldier => {
+            if (soldier.loyalty < 100) {
+                soldier.loyalty += deltaTime * 0.1; // 0.1 par seconde
+                soldier.loyalty = Math.min(soldier.loyalty, 100);
+            }
+        });
     }
     
     save() {
         const data = {
-            soldiers: this.soldiers,
-            maxCapacity: this.maxCapacity,
-            currentFormation: this.currentFormation,
-            missionTimers: this.missionTimers
+            soldiers: Array.from(this.soldiers.entries()),
+            maxSoldiers: this.maxSoldiers,
+            generals: this.generals,
+            formations: this.formations
         };
         
         SaveManager.save('shadowArmy', data);
     }
     
-    loadFromSave() {
+    load() {
         const data = SaveManager.load('shadowArmy');
         if (data) {
-            this.soldiers = data.soldiers || [];
-            this.maxCapacity = data.maxCapacity || 10;
-            this.currentFormation = data.currentFormation || 'default';
-            this.missionTimers = data.missionTimers || {};
-            
-            // Vérifier les missions en cours
-            this.checkMissionTimers();
+            this.soldiers = new Map(data.soldiers);
+            this.maxSoldiers = data.maxSoldiers;
+            this.generals = data.generals;
+            this.formations = data.formations;
         }
     }
     
-    checkMissionTimers() {
-        const now = Date.now();
-        
-        Object.entries(this.missionTimers).forEach(([missionId, mission]) => {
-            if (mission.endTime <= now) {
-                // Mission terminée
-                this.completeMission(mission.soldiers, mission.rewards, missionId);
-            } else {
-                // Redémarrer le timer
-                const remainingTime = mission.endTime - now;
-                this.startMissionTimer(mission.soldiers, mission.rewards, remainingTime);
-            }
-        });
-    }
-    
-    getSoldierCount() {
-        return this.soldiers.length;
-    }
-    
-    getActiveSoldiers() {
-        return this.soldiers.filter(s => s.active !== false);
-    }
-    
-    getSoldierById(id) {
-        return this.soldiers.find(s => s.id === id);
-    }
-    
-    dismissSoldier(id) {
-        const index = this.soldiers.findIndex(s => s.id === id);
-        if (index !== -1) {
-            const soldier = this.soldiers[index];
-            
-            // Récupérer une partie de l'investissement
-            const refund = Math.floor(soldier.level * 10);
-            InventorySystem.addGold(refund);
-            
-            this.soldiers.splice(index, 1);
-            
-            UI.Notifications.show(`Soldat libéré. Remboursement: ${refund} or`, 'info');
-            
-            this.save();
-            return true;
+    // Interface avec l'UI
+    static updateUI() {
+        if (window.UI && UI.ArmyUI) {
+            UI.ArmyUI.update();
         }
-        return false;
     }
 }
-
-window.ShadowArmySystem = new ShadowArmySystem();
