@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shadow Monarch Ascension</title>
+    
+    <!-- PWA -->
+    <meta name="theme-color" content="#0a0a12">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ui-evolution.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    
+    <!-- Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Touch -->
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+</head>
+<body>
+    <!-- Canvas 3D -->
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- Overlay UI -->
+        <div id="ui-overlay">
+            <!-- Barre de vie/mana -->
+            <div class="hud-top">
+                <div class="health-bar">
+                    <div class="health-fill" style="width: 100%"></div>
+                    <span class="health-text">100/100</span>
+                </div>
+                <div class="mana-bar">
+                    <div class="mana-fill" style="width: 100%"></div>
+                    <span class="mana-text">50/50</span>
+                </div>
+            </div>
+            
+            <!-- Contrôles tactiles -->
+            <div class="touch-controls">
+                <div class="joystick-area" id="move-joystick">
+                    <div class="joystick-base"></div>
+                    <div class="joystick-thumb"></div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="skill-btn" data-skill="1">⚔️</button>
+                    <button class="skill-btn" data-skill="2">🛡️</button>
+                    <button class="skill-btn" data-skill="3">🔥</button>
+                    <button class="skill-btn" data-skill="4">💨</button>
+                    <button class="skill-btn special" data-skill="ult">✨</button>
+                </div>
+            </div>
+            
+            <!-- Boutons UI -->
+            <div class="ui-buttons">
+                <button id="btn-evolution" class="ui-btn">📊 Système</button>
+                <button id="btn-inventory" class="ui-btn">🎒</button>
+                <button id="btn-quests" class="ui-btn">📜</button>
+                <button id="btn-army" class="ui-btn">👥</button>
+            </div>
+        </div>
+        
+        <!-- Interface d'évolution (cachée par défaut) -->
+        <div id="evolution-ui" class="fullscreen-ui">
+            <!-- Détails dans evolution-ui.js -->
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="js/utils/performance-monitor.js"></script>
+    <script src="js/utils/mobile-optimizer.js"></script>
+    <script src="js/utils/save-manager.js"></script>
+    <script src="js/game-systems/evolution-system.js"></script>
+    <script src="js/game-systems/combat-system.js"></script>
+    <script src="js/ui/touch-controls.js"></script>
+    <script src="js/ui/evolution-ui.js"></script>
+    <script src="js/three-app.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
