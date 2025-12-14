@@ -1,326 +1,260 @@
 class QuestSystem {
     constructor() {
-        this.activeQuests = [];
-        this.completedQuests = [];
-        this.failedQuests = [];
-        this.dailyQuests = [];
-        this.achievements = [];
+        this.activeQuests = new Map();
+        this.completedQuests = new Set();
+        this.failedQuests = new Set();
         
-        this.dailyResetTime = this.getNextResetTime();
-        this.checkDailyReset();
+        this.questDatabase = QuestDatabase;
         
-        this.loadFromSave();
+        this.load();
     }
     
-    addQuest(quest) {
-        quest.id = quest.id || Date.now() + Math.random();
-        quest.startedAt = Date.now();
-        quest.objectives = quest.objectives.map(obj => ({
-            ...obj,
-            current: 0,
-            completed: false
-        }));
-        
-        this.activeQuests.push(quest);
-        
-        // Notification
-        UI.Notifications.show(`Nouvelle quête: ${quest.title}`, 'quest');
-        
-        // Sauvegarder
-        this.save();
-        
-        return quest.id;
-    }
-    
-    updateQuestObjective(questId, objectiveIndex, amount = 1) {
-        const quest = this.activeQuests.find(q => q.id === questId);
-        if (!quest) return false;
-        
-        const objective = quest.objectives[objectiveIndex];
-        if (!objective || objective.completed) return false;
-        
-        objective.current += amount;
-        
-        if (objective.current >= objective.required) {
-            objective.completed = true;
-            objective.current = objective.required;
-            
-            // Vérifier si la quête est terminée
-            if (quest.objectives.every(obj => obj.completed)) {
-                this.completeQuest(questId);
-            }
+    startQuest(questId) {
+        if (this.activeQuests.has(questId) || 
+            this.completedQuests.has(questId) || 
+            this.failedQuests.has(questId)) {
+            return false;
         }
         
-        // Mettre à jour l'UI
-        UI.QuestUI.updateQuest(quest);
+        const questTemplate = this.questDatabase[questId];
+        if (!questTemplate) return false;
         
-        // Sauvegarder
+        const quest = {
+            ...questTemplate,
+            progress: {},
+            startedAt: Date.now(),
+            objectives: questTemplate.objectives.map(obj => ({...obj, current: 0}))
+        };
+        
+        this.activeQuests.set(questId, quest);
+        
+        // Notification
+        UI.Notifications.show(`Quête commencée: ${quest.name}`, 'quest');
+        
         this.save();
-        
         return true;
+    }
+    
+    updateQuestProgress(questId, objectiveIndex, amount = 1) {
+        const quest = this.activeQuests.get(questId);
+        if (!quest) return;
+        
+        const objective = quest.objectives[objectiveIndex];
+        if (!objective) return;
+        
+        objective.current += amount;
+        objective.current = Math.min(objective.current, objective.required);
+        
+        // Vérifier si l'objectif est terminé
+        if (objective.current >= objective.required) {
+            objective.completed = true;
+            this.checkQuestCompletion(questId);
+        }
+        
+        this.save();
+        QuestUI.updateQuest(questId);
+    }
+    
+    checkQuestCompletion(questId) {
+        const quest = this.activeQuests.get(questId);
+        if (!quest) return;
+        
+        const allCompleted = quest.objectives.every(obj => obj.completed);
+        
+        if (allCompleted) {
+            this.completeQuest(questId);
+        }
     }
     
     completeQuest(questId) {
-        const index = this.activeQuests.findIndex(q => q.id === questId);
-        if (index === -1) return false;
+        const quest = this.activeQuests.get(questId);
+        if (!quest) return;
         
-        const quest = this.activeQuests[index];
-        quest.completedAt = Date.now();
-        
-        // Retirer des quêtes actives
-        this.activeQuests.splice(index, 1);
-        
-        // Ajouter aux quêtes complétées
-        this.completedQuests.push(quest);
-        
-        // Distribuer les récompenses
+        // Donner les récompenses
         this.giveQuestRewards(quest);
         
+        // Marquer comme complétée
+        this.activeQuests.delete(questId);
+        this.completedQuests.add(questId);
+        
         // Notification
-        UI.Notifications.show(`Quête complétée: ${quest.title}`, 'success');
+        UI.Notifications.show(`Quête terminée: ${quest.name}`, 'quest');
         
-        // Sauvegarder
+        // Débloquer de nouvelles quêtes si nécessaire
+        this.unlockNextQuests(questId);
+        
         this.save();
-        
-        return true;
     }
     
     giveQuestRewards(quest) {
         if (quest.rewards) {
+            // Expérience
             if (quest.rewards.exp) {
                 EvolutionSystem.gainExp(quest.rewards.exp);
             }
             
+            // Or
             if (quest.rewards.gold) {
-                InventorySystem.addGold(quest.rewards.gold);
+                InventorySystem.gold += quest.rewards.gold;
             }
             
+            // Items
             if (quest.rewards.items) {
                 quest.rewards.items.forEach(item => {
-                    InventorySystem.addItem(item);
+                    InventorySystem.addItem(item.id, item.quantity);
                 });
             }
             
-            if (quest.rewards.skillPoints) {
-                EvolutionSystem.stats.availablePoints += quest.rewards.skillPoints;
+            // Compétences
+            if (quest.rewards.skills) {
+                quest.rewards.skills.forEach(skillId => {
+                    EvolutionSystem.skills.active.push(skillId);
+                });
             }
         }
+    }
+    
+    unlockNextQuests(questId) {
+        const quest = this.questDatabase[questId];
+        if (quest.unlocks) {
+            quest.unlocks.forEach(nextQuestId => {
+                if (!this.isQuestAvailable(nextQuestId)) {
+                    // La quête devient disponible
+                    this.questDatabase[nextQuestId].available = true;
+                }
+            });
+        }
+    }
+    
+    isQuestAvailable(questId) {
+        const quest = this.questDatabase[questId];
+        if (!quest) return false;
+        
+        // Vérifier les prérequis
+        if (quest.requirements) {
+            if (quest.requirements.level && 
+                EvolutionSystem.level < quest.requirements.level) {
+                return false;
+            }
+            
+            if (quest.requirements.quests) {
+                const requiredQuests = quest.requirements.quests;
+                const hasAllQuests = requiredQuests.every(qId => 
+                    this.completedQuests.has(qId)
+                );
+                if (!hasAllQuests) return false;
+            }
+        }
+        
+        return quest.available !== false;
     }
     
     failQuest(questId) {
-        const index = this.activeQuests.findIndex(q => q.id === questId);
-        if (index === -1) return false;
+        const quest = this.activeQuests.get(questId);
+        if (!quest) return;
         
-        const quest = this.activeQuests[index];
-        quest.failedAt = Date.now();
-        
-        this.activeQuests.splice(index, 1);
-        this.failedQuests.push(quest);
+        // Échec (par exemple, temps écoulé)
+        this.activeQuests.delete(questId);
+        this.failedQuests.add(questId);
         
         // Notification
-        UI.Notifications.show(`Quête échouée: ${quest.title}`, 'error');
-        
-        this.save();
-        return true;
-    }
-    
-    generateDailyQuests() {
-        this.dailyQuests = [];
-        
-        // Générer 3 quêtes quotidiennes
-        const dailyCount = 3;
-        const questTypes = ['hunt', 'collect', 'complete_dungeon', 'upgrade', 'extract'];
-        
-        for (let i = 0; i < dailyCount; i++) {
-            const type = questTypes[Math.floor(Math.random() * questTypes.length)];
-            const quest = this.createDailyQuest(type);
-            this.dailyQuests.push(quest);
-        }
+        UI.Notifications.show(`Quête échouée: ${quest.name}`, 'quest');
         
         this.save();
     }
     
-    createDailyQuest(type) {
-        const templates = {
-            hunt: {
-                title: 'Chasse quotidienne',
-                description: 'Vaincre des monstres',
-                objectives: [{
-                    type: 'kill',
-                    target: 'any',
-                    required: 10 + Math.floor(Math.random() * 20)
-                }],
-                rewards: {
-                    exp: 100,
-                    gold: 500
-                }
-            },
-            collect: {
-                title: 'Collecte de ressources',
-                description: 'Collecter des ressources',
-                objectives: [{
-                    type: 'collect',
-                    target: 'any',
-                    required: 5 + Math.floor(Math.random() * 10)
-                }],
-                rewards: {
-                    exp: 150,
-                    gold: 300,
-                    items: [{ type: 'consumable', name: 'Potion de soin', quantity: 3 }]
-                }
-            },
-            complete_dungeon: {
-                title: 'Explorateur',
-                description: 'Terminer un donjon',
-                objectives: [{
-                    type: 'complete_dungeon',
-                    target: 'any',
-                    required: 1
-                }],
-                rewards: {
-                    exp: 300,
-                    gold: 1000
-                }
-            },
-            upgrade: {
-                title: 'Amélioration',
-                description: 'Améliorer une compétence ou un équipement',
-                objectives: [{
-                    type: 'upgrade',
-                    target: 'any',
-                    required: 1
-                }],
-                rewards: {
-                    exp: 200,
-                    gold: 800
-                }
-            },
-            extract: {
-                title: 'Chasseur d\'ombres',
-                description: 'Extraire des soldats d\'ombre',
-                objectives: [{
-                    type: 'extract',
-                    target: 'any',
-                    required: 3
-                }],
-                rewards: {
-                    exp: 250,
-                    gold: 600,
-                    skillPoints: 1
-                }
-            }
-        };
-        
-        const template = templates[type] || templates.hunt;
-        
-        return {
-            ...template,
-            id: Date.now() + Math.random(),
-            type: 'daily',
-            expiresAt: this.dailyResetTime
-        };
-    }
-    
-    getNextResetTime() {
-        const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
-        
-        return tomorrow.getTime();
-    }
-    
-    checkDailyReset() {
-        const now = Date.now();
-        
-        if (now >= this.dailyResetTime) {
-            // Réinitialiser les quêtes quotidiennes
-            this.generateDailyQuests();
-            this.dailyResetTime = this.getNextResetTime();
-            
-            // Notification
-            UI.Notifications.show('Nouvelles quêtes quotidiennes disponibles!', 'info');
-        }
-        
-        // Vérifier à nouveau dans 1 minute
-        setTimeout(() => this.checkDailyReset(), 60000);
-    }
-    
-    checkAchievements() {
-        const achievementChecks = {
-            'first_kill': () => Player.totalKills >= 1,
-            'dungeon_master': () => Player.completedDungeons >= 10,
-            'shadow_collector': () => ShadowArmySystem.getSoldierCount() >= 20,
-            'wealthy': () => InventorySystem.getGold() >= 100000,
-            'max_level': () => EvolutionSystem.level >= 100,
-            'rank_sss': () => EvolutionSystem.rank === 'SSS'
-        };
-        
-        Object.entries(achievementChecks).forEach(([id, check]) => {
-            if (!this.achievements.includes(id) && check()) {
-                this.unlockAchievement(id);
+    initializeStartingQuests() {
+        // Commencer les quêtes de départ
+        Object.keys(this.questDatabase).forEach(questId => {
+            const quest = this.questDatabase[questId];
+            if (quest.startingQuest) {
+                this.startQuest(questId);
             }
         });
     }
     
-    unlockAchievement(achievementId) {
-        this.achievements.push(achievementId);
-        
-        const rewards = this.getAchievementReward(achievementId);
-        
-        // Notification spéciale
-        UI.Notifications.show(`Haut-fait débloqué: ${achievementId}`, 'achievement');
-        
-        // Donner les récompenses
-        if (rewards) {
-            this.giveQuestRewards({ rewards: rewards });
-        }
-        
-        this.save();
-    }
-    
-    getAchievementReward(achievementId) {
-        const rewards = {
-            'first_kill': { exp: 100, gold: 500 },
-            'dungeon_master': { exp: 1000, gold: 5000, skillPoints: 5 },
-            'shadow_collector': { exp: 500, gold: 2000 },
-            'wealthy': { exp: 1000, gold: 10000 },
-            'max_level': { exp: 0, gold: 100000, skillPoints: 20 },
-            'rank_sss': { exp: 0, gold: 500000, skillPoints: 50 }
-        };
-        
-        return rewards[achievementId];
+    update(deltaTime) {
+        // Vérifier les quêtes avec limite de temps
+        this.activeQuests.forEach((quest, questId) => {
+            if (quest.timeLimit) {
+                const elapsed = Date.now() - quest.startedAt;
+                if (elapsed > quest.timeLimit) {
+                    this.failQuest(questId);
+                }
+            }
+        });
     }
     
     save() {
         const data = {
-            activeQuests: this.activeQuests,
-            completedQuests: this.completedQuests,
-            failedQuests: this.failedQuests,
-            dailyQuests: this.dailyQuests,
-            achievements: this.achievements,
-            dailyResetTime: this.dailyResetTime
+            activeQuests: Array.from(this.activeQuests.entries()),
+            completedQuests: Array.from(this.completedQuests),
+            failedQuests: Array.from(this.failedQuests)
         };
         
         SaveManager.save('quests', data);
     }
     
-    loadFromSave() {
+    load() {
         const data = SaveManager.load('quests');
         if (data) {
-            this.activeQuests = data.activeQuests || [];
-            this.completedQuests = data.completedQuests || [];
-            this.failedQuests = data.failedQuests || [];
-            this.dailyQuests = data.dailyQuests || [];
-            this.achievements = data.achievements || [];
-            this.dailyResetTime = data.dailyResetTime || this.getNextResetTime();
-            
-            // Générer les quêtes quotidiennes si vide
-            if (this.dailyQuests.length === 0) {
-                this.generateDailyQuests();
-            }
+            this.activeQuests = new Map(data.activeQuests);
+            this.completedQuests = new Set(data.completedQuests);
+            this.failedQuests = new Set(data.failedQuests);
         }
     }
 }
 
-window.QuestSystem = new QuestSystem();
+// Base de données de quêtes (exemple)
+const QuestDatabase = {
+    'tutorial_1': {
+        name: 'Premiers Pas',
+        description: 'Tuez 5 slimes dans le donjon débutant.',
+        type: 'hunt',
+        objectives: [
+            { type: 'kill', target: 'slime', required: 5, description: 'Tuez 5 slimes' }
+        ],
+        rewards: {
+            exp: 100,
+            gold: 50,
+            items: [{ id: 'potion_health', quantity: 3 }]
+        },
+        startingQuest: true,
+        unlocks: ['tutorial_2']
+    },
+    'tutorial_2': {
+        name: 'Extraction d\'Ombre',
+        description: 'Extrayez un soldat d\'ombre d\'un ennemi vaincu.',
+        type: 'special',
+        requirements: {
+            level: 5,
+            quests: ['tutorial_1']
+        },
+        objectives: [
+            { type: 'extract', target: 'any', required: 1, description: 'Extrayez 1 soldat d\'ombre' }
+        ],
+        rewards: {
+            exp: 200,
+            gold: 100,
+            skills: ['shadow_extract']
+        },
+        available: false
+    },
+    'dungeon_clear_1': {
+        name: 'Nettoyage de Donjon',
+        description: 'Terminez le donjon de la Forêt Sombre.',
+        type: 'dungeon',
+        requirements: {
+            level: 10
+        },
+        objectives: [
+            { type: 'complete_dungeon', target: 'dark_forest', required: 1, description: 'Terminez le donjon Forêt Sombre' }
+        ],
+        rewards: {
+            exp: 500,
+            gold: 300,
+            items: [{ id: 'sword_steel', quantity: 1 }]
+        },
+        available: false
+    }
+};
