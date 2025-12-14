@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Backup files
+backup/
+*.bak
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+tmp/
+temp/
+
+# User saves (sensitive)
+user_saves/
+*.save
+
+# Assets générés
+assets/generated/
+assets/cache/
+
+# Coverage
+coverage/
+.nyc_output
+
+# Cache
+.cache/
