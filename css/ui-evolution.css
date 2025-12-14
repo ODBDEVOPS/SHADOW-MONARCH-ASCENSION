@@ -1,1 +1,797 @@
+/* Styles spécifiques à l'interface d'évolution */
 
+.evolution-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+    border-radius: 20px;
+    overflow: hidden;
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.evolution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: rgba(26, 26, 46, 0.8);
+    border-bottom: 2px solid #6d28d9;
+}
+
+.evolution-title {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.evolution-title h2 {
+    margin: 0;
+    color: #00f3ff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+.rank-badge {
+    padding: 5px 15px;
+    background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px currentColor;
+    animation: glow 2s infinite alternate;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.close-btn:active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(0.9);
+}
+
+.evolution-tabs {
+    display: flex;
+    background: rgba(26, 26, 46, 0.6);
+    border-bottom: 1px solid #333;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tab-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 15px 10px;
+    background: none;
+    border: none;
+    color: #a5a5a5;
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.tab-btn.active {
+    color: #00f3ff;
+    background: rgba(0, 243, 255, 0.1);
+    border-bottom: 2px solid #00f3ff;
+}
+
+.tab-btn:active {
+    background: rgba(109, 40, 217, 0.2);
+}
+
+.evolution-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Onglet Stats */
+.player-summary {
+    background: rgba(26, 26, 46, 0.6);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #333;
+}
+
+.level-display {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.level-circle {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 0 20px rgba(109, 40, 217, 0.5);
+}
+
+.exp-bar {
+    flex: 1;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.exp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00f3ff, #6d28d9);
+    border-radius: 10px;
+    transition: width 0.5s ease-out;
+}
+
+.exp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px black;
+}
+
+.rank-progression {
+    margin-top: 20px;
+}
+
+.rank-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+}
+
+.rank-steps::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 25px;
+    right: 25px;
+    height: 3px;
+    background: #333;
+    z-index: 1;
+}
+
+.rank-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+}
+
+.step-icon {
+    width: 50px;
+    height: 50px;
+    background: #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+    transition: all 0.3s;
+}
+
+.rank-step.active .step-icon {
+    background: linear-gradient(135deg, currentColor, rgba(255, 255, 255, 0.8));
+    transform: scale(1.1);
+    box-shadow: 0 0 15px currentColor;
+}
+
+.rank-step.unlocked .step-icon {
+    background: linear-gradient(135deg, #00ff88, #00aaff);
+}
+
+.step-label {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #a5a5a5;
+}
+
+.rank-step.active .step-label {
+    color: white;
+}
+
+/* Grille de stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    background: rgba(26, 26, 46, 0.8);
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-item:hover {
+    border-color: #6d28d9;
+    transform: translateY(-2px);
+}
+
+.stat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stat-icon {
+    font-size: 1.2rem;
+}
+
+.stat-name {
+    font-weight: bold;
+    color: #a5a5a5;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #00f3ff;
+    text-align: center;
+}
+
+.stat-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.stat-btn {
+    flex: 1;
+    padding: 8px 0;
+    background: rgba(109, 40, 217, 0.3);
+    border: 1px solid #6d28d9;
+    border-radius: 5px;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.stat-btn:active {
+    background: rgba(109, 40, 217, 0.7);
+    transform: scale(0.95);
+}
+
+.stat-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.stat-btn.plus {
+    background: rgba(16, 185, 129, 0.3);
+    border-color: #10b981;
+}
+
+.stat-btn.minus {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: #ef4444;
+}
+
+.available-points {
+    background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    border: 2px solid #00f3ff;
+}
+
+.available-points.has-points {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 10px #6d28d9; }
+    50% { box-shadow: 0 0 20px #00f3ff; }
+}
+
+/* Onglet Compétences */
+.skills-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.skills-active, .skills-passive {
+    background: rgba(26, 26, 46, 0.8);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid #333;
+}
+
+.skills-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #00f3ff;
+    font-size: 1.2rem;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.skill-item {
+    background: rgba(26, 26, 46, 0.9);
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.2s;
+}
+
+.skill-item:hover {
+    border-color: #6d28d9;
+    transform: translateY(-2px);
+}
+
+.skill-item.passive {
+    border-color: #f59e0b;
+}
+
+.skill-icon {
+    font-size: 1.5rem;
+    width: 50px;
+    height: 50px;
+    background: rgba(109, 40, 217, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.skill-item.passive .skill-icon {
+    background: rgba(245, 158, 11, 0.2);
+}
+
+.skill-info {
+    flex: 1;
+}
+
+.skill-info h4 {
+    margin: 0 0 5px 0;
+    color: white;
+    font-size: 1rem;
+}
+
+.skill-info p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #a5a5a5;
+}
+
+.skill-level {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.skill-upgrade-btn {
+    width: 40px;
+    height: 40px;
+    background: rgba(16, 185, 129, 0.3);
+    border: 1px solid #10b981;
+    border-radius: 50%;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.skill-upgrade-btn:active {
+    background: rgba(16, 185, 129, 0.7);
+    transform: scale(0.9);
+}
+
+.skill-upgrade-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Onglet Évolution */
+.evolution-tree {
+    background: rgba(26, 26, 46, 0.8);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #333;
+    position: relative;
+    min-height: 200px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.evolution-node {
+    width: 70px;
+    height: 70px;
+    background: #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    z-index: 2;
+    transition: all 0.3s;
+}
+
+.evolution-node.current {
+    background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+    box-shadow: 0 0 20px rgba(109, 40, 217, 0.7);
+    transform: scale(1.1);
+}
+
+.evolution-node.unlocked {
+    background: linear-gradient(135deg, #00ff88, #00aaff);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+}
+
+.evolution-node.available {
+    background: linear-gradient(135deg, #f59e0b, #ffaa00);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+    animation: pulse 2s infinite;
+    cursor: pointer;
+}
+
+.evolution-node.locked {
+    background: #333;
+    opacity: 0.5;
+}
+
+.node-icon {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+}
+
+.node-info {
+    position: absolute;
+    bottom: -25px;
+    font-size: 0.7rem;
+    color: #a5a5a5;
+    white-space: nowrap;
+}
+
+.evolution-path {
+    position: absolute;
+    height: 3px;
+    background: #333;
+    z-index: 1;
+    transform-origin: left center;
+}
+
+.evolution-info {
+    background: rgba(26, 26, 46, 0.8);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid #333;
+}
+
+.evolution-info h3 {
+    margin-top: 0;
+    color: #00f3ff;
+}
+
+.evolution-info p {
+    color: #a5a5a5;
+    margin-bottom: 20px;
+}
+
+.evolution-rewards h4 {
+    color: #10b981;
+    margin-bottom: 10px;
+}
+
+.evolution-rewards ul {
+    margin: 0;
+    padding-left: 20px;
+    color: white;
+}
+
+.evolution-rewards li {
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+/* Onglet Succès */
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.achievement-item {
+    background: rgba(26, 26, 46, 0.8);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid #333;
+    transition: all 0.2s;
+}
+
+.achievement-item.unlocked {
+    border-color: #10b981;
+}
+
+.achievement-item.locked {
+    opacity: 0.7;
+    filter: grayscale(0.5);
+}
+
+.achievement-icon {
+    font-size: 1.5rem;
+    width: 50px;
+    height: 50px;
+    background: rgba(109, 40, 217, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.achievement-item.unlocked .achievement-icon {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.achievement-info {
+    flex: 1;
+}
+
+.achievement-info h4 {
+    margin: 0 0 5px 0;
+    color: white;
+    font-size: 1rem;
+}
+
+.achievement-info p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #a5a5a5;
+}
+
+.achievement-reward {
+    padding: 5px 10px;
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px solid #f59e0b;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    color: #f59e0b;
+    font-weight: bold;
+}
+
+/* Footer de l'évolution */
+.evolution-footer {
+    display: flex;
+    gap: 15px;
+    padding: 20px;
+    background: rgba(26, 26, 46, 0.8);
+    border-top: 1px solid #333;
+}
+
+.evolution-footer button {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-auto-allocate {
+    background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+    color: white;
+}
+
+.btn-reset-stats {
+    background: linear-gradient(135deg, #333, #555);
+    color: white;
+}
+
+.evolution-footer button:active {
+    transform: scale(0.95);
+}
+
+/* Animations */
+@keyframes floatUp {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+}
+
+.stat-change-animation {
+    animation: floatUp 1s forwards;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .evolution-title h2 {
+        font-size: 1.2rem;
+    }
+    
+    .tab-btn {
+        min-width: 70px;
+        padding: 12px 8px;
+        font-size: 0.8rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .skills-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .evolution-node {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .node-icon {
+        font-size: 1.2rem;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+    .evolution-content {
+        padding: 10px;
+    }
+    
+    .player-summary {
+        padding: 10px;
+    }
+    
+    .stat-item {
+        padding: 10px;
+    }
+    
+    .evolution-footer {
+        padding: 10px;
+    }
+    
+    .evolution-footer button {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Support de la préférence de réduction des animations */
+@media (prefers-reduced-motion: reduce) {
+    .evolution-container,
+    .tab-content.active,
+    .stat-item,
+    .skill-item,
+    .achievement-item,
+    .evolution-footer button {
+        transition: none;
+        animation: none;
+    }
+    
+    .available-points.has-points {
+        animation: none;
+    }
+}
+
+/* Mode sombre/clair (support futur) */
+@media (prefers-color-scheme: light) {
+    .evolution-container {
+        background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%);
+    }
+    
+    .evolution-header,
+    .player-summary,
+    .stat-item,
+    .skills-active,
+    .skills-passive,
+    .evolution-tree,
+    .evolution-info,
+    .achievement-item,
+    .evolution-footer {
+        background: rgba(240, 240, 240, 0.9);
+        border-color: #ddd;
+    }
+    
+    .evolution-title h2 {
+        color: #6d28d9;
+    }
+    
+    .stat-name,
+    .step-label,
+    .evolution-info p,
+    .skill-info p,
+    .achievement-info p {
+        color: #666;
+    }
+    
+    .exp-bar {
+        background: rgba(0, 0, 0, 0.1);
+    }
+}
